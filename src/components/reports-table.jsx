@@ -1,13 +1,14 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Download, RefreshCw, ArrowUpDown } from "lucide-react"
+import { Download, RefreshCw, ArrowUpDown, Trash } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ConfirmModal } from "@/components/ui/modal"
 
-export default function ReportsTable({ reports, loading, onRefresh, onDownload }) {
+export default function ReportsTable({ reports, loading, onRefresh, onDownload,onDelete }) {
   const [refreshing, setRefreshing] = useState(false)
   const [sortedReports, setSortedReports] = useState([])
   const [sortDirection, setSortDirection] = useState("desc") // "desc" para descendente (más reciente primero)
@@ -90,6 +91,8 @@ export default function ReportsTable({ reports, loading, onRefresh, onDownload }
     onDownload(url)
   }
 
+
+  
   // Manejar el refresco de la tabla
   const handleRefresh = async () => {
     try {
@@ -102,6 +105,27 @@ export default function ReportsTable({ reports, loading, onRefresh, onDownload }
       setRefreshing(false)
     }
   }
+
+
+  //Estado de mis componentes de modal
+  const [modalOpen, setModalOpen] = useState(false)
+  const [selectedReportId, setSelectedReportId] = useState(null)
+
+  // Función que implementar una modal de confirmacion
+  const handleDeleteClick = (report) => {
+    const id = getPropertyValue(report, "reportId");
+    setSelectedReportId(id);
+    setModalOpen(true)
+  }
+
+ //Confirmacion para eliminar el reporte
+  const confirmDelete = async (selectedReportIdA) => {
+  if (!selectedReportId || !onDelete) return;
+
+    await onDelete(selectedReportIdA);  // llama a la función pasada desde page.tsx
+    setModalOpen(false);
+    setSelectedReportId(null);
+};
 
   return (
     <div className="overflow-x-auto">
@@ -184,8 +208,13 @@ export default function ReportsTable({ reports, loading, onRefresh, onDownload }
                       
                     )}
                     
-
                     
+                     {isStatusCompleted(report) && ( 
+                      <Button variant="ghost" size="icon" title="Delete"   onClick={() => handleDeleteClick(report)} >
+                          <Trash className="h-4 w-4" />
+                      </Button>
+                    )}
+
                     
                    
                   </TableCell>
@@ -198,9 +227,35 @@ export default function ReportsTable({ reports, loading, onRefresh, onDownload }
                 </TableCell>
               </TableRow>
             )}
+
+          
+           
+
+
           </TableBody>
         </Table>
       )}
+
+      
+       <ConfirmModal
+          open={modalOpen}
+          onOpenChange={setModalOpen}
+          title="Eliminar Reporte"
+          description={`¿Estás seguro de que deseas eliminar el reporte ${selectedReportId}?`}
+          actions={[
+            { label: "Cancelar", variant: "outline" },
+            { label: "Confirma", variant: "destructive", onClick: () => {
+                console.log("Eliminar report:", selectedReportId)
+                // Aquí se llama al  backend para eliminar
+                confirmDelete(selectedReportId)
+            }},
+          ]}
+        />
     </div>
+    
+
+
   )
 }
+
+

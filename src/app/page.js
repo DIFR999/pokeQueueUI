@@ -10,7 +10,7 @@ import { AlertCircle } from 'lucide-react'
 import PokemonTypeSelector from "@/components/pokemon-type-selector"
 import ReportsTable from "@/components/reports-table"
 import { getPokemonTypes } from "@/services/pokemon-service"
-import { getReports, createReport } from "@/services/report-service"
+import { getReports, createReport,deleteReport } from "@/services/report-service"
 
 export default function PokemonReportsPage() {
   const [pokemonTypes, setPokemonTypes] = useState([])
@@ -20,6 +20,10 @@ export default function PokemonReportsPage() {
   const [creatingReport, setCreatingReport] = useState(false)
   const [error, setError] = useState(null)
   const [selectedType, setSelectedType] = useState("")
+
+  //Estados de mi nuevo input numerico
+  const [maxRecords, setMaxRecords] = useState("");
+  const [maxRecordsError, setMaxRecordsError] = useState(null)
 
   // Cargar los tipos de Pokémon
   useEffect(() => {
@@ -80,7 +84,10 @@ export default function PokemonReportsPage() {
       setCreatingReport(true)
 
       // Crear un nuevo reporte usando la API
-      await createReport(selectedType)
+
+      const sampleSize = parseInt(maxRecords, 10); 
+
+      await createReport(selectedType,sampleSize)
 
       // Mostrar notificación de éxito
       toast.success(`Se ha generado un nuevo reporte para el tipo ${selectedType}.`)
@@ -103,8 +110,79 @@ export default function PokemonReportsPage() {
   const handleDownloadCSV = (url) => {
     window.open(url, "_blank")
   }
+/* Revisarlo
+  const catchThemAll2 = async () => {
+      if (!selectedType) return;
+
+      // Validar número máximo
+      if (maxRecords !== "" && (!/^[1-9]\d*$/.test(maxRecords))) {
+        setMaxRecordsError("Debe ser un número entero positivo");
+        return;
+      }
+
+      setMaxRecordsError(null);
+
+      try {
+        setCreatingReport(true);
+
+        // PASAR maxRecords como parámetro hacia el backend
+        await createReport(selectedType, maxRecords || null);
+
+        toast.success(`Se ha generado un reporte de ${selectedType}.`);
+
+        await loadReports();
+        setCreatingReport(false);
+
+      } catch (error) {
+        console.error("Error creating report:", error);
+        toast.error("No se pudo crear el reporte. Por favor, intenta de nuevo.");
+        setCreatingReport(false);
+      }
+    };
+*/
+   const handleMaxRecordsChange = (e) => {
+      const value = e.target.value;
+      const regex = /^\d+$/;
+
+      setMaxRecords(value);
+
+      if (value === "") {
+        // Input vacío → solo mensaje de default
+        setMaxRecordsError("");
+      } else if (!regex.test(value)|| (value.includes('e') || value.includes('E'))) {
+        // Valor inválido → mensaje de error
+        setMaxRecordsError("El valor debe ser un entero positivo mayor que 0");
+      } else {
+        // Valor válido → sin error
+        setMaxRecordsError("");
+      }
+    };
+
+
+
+  // Función para eliminar reporte
+  const handleDeleteReport = async (id) => {
+    try {
+      // Llamada al backend para eliminar
+      const res = await deleteReport(id);
+      console.log("AQUI REVISA",res?.ok )
+      if (res?.ok) {
+        toast.success(`Reporte ${id} eliminado correctamente`);
+        // Refrescar la tabla
+        await loadReports();
+      } else {
+        toast.error(`No se pudo eliminar el reporte ${id}`);
+      }
+    } catch (error) {
+      console.error("Error eliminando el reporte:", error);
+      toast.error("Error eliminando el reporte. Intenta de nuevo.");
+    }
+  };
 
   const isLoading = loadingTypes || loadingReports
+
+
+  
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -129,23 +207,54 @@ export default function PokemonReportsPage() {
                 onTypeChange={setSelectedType}
                 loading={loadingTypes}
               />
+
             </div>
+
+          
             <div className="w-full md:w-1/3">
               <Button
                 onClick={catchThemAll}
-                disabled={!selectedType || isLoading || creatingReport}
+                disabled={!selectedType || isLoading || creatingReport || maxRecordsError}
                 className="w-full font-bold"
               >
                 {creatingReport ? "Creating..." : isLoading ? "Loading..." : "Catch them all!"}
               </Button>
+
+              
             </div>
+
+            
           </div>
 
+            <div className="w-full md:w-1/3">
+                <label className="block text-sm font-semibold mb-1">Número Máximo de Registros</label>
+                <input
+                  type="text"
+                  min="1"
+                  placeholder="Ej. 100"
+                  value={maxRecords}
+                  mode="natural"
+                  disabled={!selectedType|| isLoading || creatingReport }
+                  onChange={handleMaxRecordsChange}
+
+                  className="w-full rounded-md border px-3 py-2 text-sm shadow-sm border-gray-300 focus:border-blue-400 focus:ring focus:ring-blue-200"
+                />
+                {maxRecordsError && (
+                  <p className="text-red-600 text-xs mt-1">{maxRecordsError}</p>
+                )}
+
+                {/* Mensaje de valor por defecto */}
+                {!maxRecords && !maxRecordsError && selectedType && !isLoading && !creatingReport && "e" && (
+                  <p className="text-gray-500 text-xs mt-1">Si no se escoge, se tomará por default el número máximo de registros permitido</p>
+                )}
+            </div>
+                <br />
           <ReportsTable
             reports={reports}
             loading={loadingReports}
             onRefresh={handleRefreshTable}
             onDownload={handleDownloadCSV}
+            onDelete={handleDeleteReport}
           />
         </CardContent>
       </Card>

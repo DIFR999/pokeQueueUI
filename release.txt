@@ -6,7 +6,7 @@ az login
 az acr login --name acrpokequeuedev7
 
 docker tag pokeui:latest acrpokequeuedev7.azurecr.io/pokeui:latest
-docker tag pokeui:latest acrpokequeuedev7.azurecr.io/pokeui:0.0.0
+docker tag pokeui:latest acrpokequeuedev7.azurecr.io/pokeui:0.0.2
 
 docker push acrpokequeuedev7.azurecr.io/pokeui:latest
-docker push acrpokequeuedev7.azurecr.io/pokeui:0.0.0
+docker push acrpokequeuedev7.azurecr.io/pokeui:0.0.2
